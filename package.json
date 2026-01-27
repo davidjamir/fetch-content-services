@@ -1,0 +1,17 @@
+{
+  "name": "server-fetch-content",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "local": "vercel dev",
+    "deploy": "vercel --prod",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "cheerio": "^1.1.0",
+    "fast-xml-parser": "^5.3.3"
+  }
+}
