@@ -4,6 +4,19 @@ function toStr(x) {
   return String(x ?? "").trim();
 }
 
+function removeLinks(text) {
+  if (!text) return "";
+
+  return (
+    String(text)
+      // remove http / https links
+      .replace(/https?:\/\/[^\s)>\]"'}]+/gi, "")
+      // cleanup extra spaces
+      .replace(/\s{2,}/g, " ")
+      .trim()
+  );
+}
+
 function normImgUrl(u) {
   u = toStr(u).replace(/&amp;/g, "&");
   if (!u) return "";
@@ -28,14 +41,14 @@ function ensureOgImageInRoot($, $root, ogImage, opts = {}) {
   $root.prepend(
     `<div class="og-thumb" style="margin:0 0 12px;">
       <img src="${ogImage}" alt="" style="max-width:100%;height:auto;border-radius:12px;" />
-    </div>`
+    </div>`,
   );
 
   return { added: true, reason: "prepended" };
 }
 
 function buildSnippet(text, maxLen = 290) {
-  const s = toStr(text).replace(/\s+/g, " ");
+  const s = toStr(removeLinks(text)).replace(/\s+/g, " ");
   if (s.length <= maxLen) return s;
   return s.slice(0, maxLen - 1).trimEnd() + "…";
 }
@@ -92,7 +105,7 @@ const REMOVE_CLASSES = [
   "header",
   "recommended-thumbnail",
   "recommended-wrapper",
-  "categories"
+  "categories",
   // thêm class của mày vào đây
 ];
 
@@ -103,7 +116,7 @@ function cleanArticleHtml(html, opts = {}) {
 
   // drop noisy nodes
   $(
-    "script,noscript,style,iframe,svg,canvas,form,nav,header,footer,aside"
+    "script,noscript,style,iframe,svg,canvas,form,nav,header,footer,aside",
   ).remove();
 
   // best effort: pick main content area
