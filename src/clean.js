@@ -47,11 +47,60 @@ function ensureOgImageInRoot($, $root, ogImage, opts = {}) {
   return { added: true, reason: "prepended" };
 }
 
-function buildSnippet(text, maxLen = 290) {
-  const s = toStr(removeLinks(text)).replace(/\s+/g, " ");
-  if (s.length <= maxLen) return s;
-  return s.slice(0, maxLen - 1).trimEnd() + "…";
+function cutPointerPrefixAnywhere(snippet) {
+  let s = toStr(snippet);
+  if (!s) return "";
+
+  // normalize
+  s = s
+    .replace(/[\u0000-\u001F\u007F]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // remove any fragment like "*]:pointer...>"
+  s = s.replace(/\*?\]?:pointer[^>]*>/gi, " ");
+
+  return s.replace(/\s+/g, " ").trim();
 }
+
+function buildSnippet(text, maxLen = 290) {
+  let s = toStr(removeLinks(text));
+  s = cutPointerPrefixAnywhere(s);
+  s = s.replace(/\s+/g, " ").trim();
+  if (s.length > maxLen) {
+    s = s.slice(0, maxLen - 1).trimEnd() + "…";
+  }
+  return s;
+}
+
+function pickNestedMainArticle($) {
+  let best = null;
+  let bestScore = 0;
+
+  $("article").each((_, el) => {
+    const $el = $(el);
+
+    // Nếu chứa article con → thường là wrapper
+    const nestedCount = $el.find("article").length;
+    if (nestedCount > 0) return;
+
+    const text = $el.text().trim();
+    if (text.length < 300) return;
+
+    const pCount = $el.find("p").length;
+    const imgCount = $el.find("img").length;
+
+    const score = text.length + pCount * 100 + imgCount * 30;
+
+    if (score > bestScore) {
+      bestScore = score;
+      best = $el;
+    }
+  });
+
+  return best;
+}
+
 const AD_SELECTORS = [
   // google ads + generic ads
   ".ads",
@@ -106,6 +155,7 @@ const REMOVE_CLASSES = [
   "recommended-thumbnail",
   "recommended-wrapper",
   "categories",
+  
   // thêm class của mày vào đây
 ];
 
@@ -119,27 +169,39 @@ function cleanArticleHtml(html, opts = {}) {
     "script,noscript,style,iframe,svg,canvas,form,nav,header,footer,aside",
   ).remove();
 
-  // best effort: pick main content area
-  const candidates = [
-    "article",
-    "main",
-    "[role=main]",
-    ".post",
-    ".entry-content",
-    ".article-content",
-  ];
   let $root = null;
 
-  for (const sel of candidates) {
-    const el = $(sel).first();
-    if (el && el.length) {
-      $root = el;
-      break;
+  // 1️⃣ Ưu tiên pick article chính bằng scoring (article lồng nhau)
+  const $mainArticle = pickNestedMainArticle($);
+  if ($mainArticle && $mainArticle.length) {
+    $root = $mainArticle;
+  }
+
+  // 2️⃣ Fallback nếu không tìm được article hợp lệ
+  if (!$root) {
+    const candidates = [
+      "main",
+      "[role=main]",
+      ".post",
+      ".entry-content",
+      ".article-content",
+      "article", // để article cuối cùng
+    ];
+
+    for (const sel of candidates) {
+      const el = $(sel).first();
+      if (el && el.length) {
+        $root = el;
+        break;
+      }
     }
   }
+
+  // 3️⃣ Fallback cuối
   if (!$root) $root = $("body").first();
   if (!$root || !$root.length) $root = $.root();
 
+  // 4️⃣ Clean trong phạm vi root
   $root.find(REMOVE_CLASSES.map((c) => `.${c}`).join(",")).remove();
   // apply within root only to avoid nuking whole page unnecessarily
   $root.find(AD_SELECTORS.join(",")).remove();

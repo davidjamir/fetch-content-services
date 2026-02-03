@@ -41,14 +41,14 @@ module.exports = async (req, res) => {
 
     const urlObj = new URL(
       req.url,
-      `https://${req.headers.host || "localhost"}`
+      `https://${req.headers.host || "localhost"}`,
     );
     const sp = urlObj.searchParams;
     const mode = normalizeMode(sp.get("mode") || "json");
     const targetUrl = sp.get("url") || ""; // URL bài gốc
 
     const addThumb = ["1", "true", "yes", "add"].includes(
-      (sp.get("thumb") || "").toLowerCase()
+      (sp.get("thumb") || "").toLowerCase(),
     );
 
     if (!targetUrl)
