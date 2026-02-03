@@ -186,7 +186,7 @@ function sameImageBySemanticIdentity(a, b) {
 function handleFeaturedImage($, $root, ogImage) {
   if (!ogImage) return { added: false, reason: "no_og_image" };
 
-  const $firstImg = $root.find("img").first();
+  const $firstImg = cloneRootWithoutIframes($root).find("img").first();
   const firstSrc = toStr($firstImg.attr("src"));
 
   console.log(ogImage);
@@ -220,15 +220,16 @@ function pickNestedMainArticle($) {
   $("article").each((_, el) => {
     const $el = $(el);
 
-    // Nếu chứa article con → thường là wrapper
-    const nestedCount = $el.find("article").length;
-    if (nestedCount > 0) return;
+    const $probe = cloneRootWithoutIframes($el);
 
-    const text = $el.text().trim();
+    // Nếu chứa article con → thường là wrapper
+    if ($probe.find("article").length > 0) return;
+
+    const text = $probe.text().trim();
     if (text.length < 300) return;
 
-    const pCount = $el.find("p").length;
-    const imgCount = $el.find("img").length;
+    const pCount = $probe.find("p").length;
+    const imgCount = $probe.find("img").length;
 
     const score = text.length + pCount * 100 + imgCount * 30;
 
@@ -262,37 +263,55 @@ function pickMainRoot($) {
   return $("body").first().length ? $("body").first() : $.root();
 }
 
-function cleanIframes($, $root) {
-  $root.find("iframe").each((_, el) => {
-    const src = toStr($(el).attr("src")).toLowerCase();
+function cleanRoot($, $root) {
+  const REMOVE_SELECTOR = [
+    ...REMOVE_CLASSES.map((c) => `.${c}`),
+    ...AD_SELECTORS,
+  ].join(",");
+  $root.find(REMOVE_SELECTOR).remove();
 
+  // remove comments
+  removeCommentsSkippingIframes($, $root);
+}
+
+function removeAdIframesEarly($) {
+  $("iframe").each((_, el) => {
+    const src = toStr($(el).attr("src")).toLowerCase();
     if (!src) {
       $(el).remove();
       return;
     }
 
     const isVideo = VIDEO_IFRAME_HOSTS.some((h) => src.includes(h));
-
     if (!isVideo) {
       $(el).remove();
     }
   });
 }
 
-function cleanRoot($, $root) {
-  $root.find(REMOVE_CLASSES.map((c) => `.${c}`).join(",")).remove();
-  $root.find(AD_SELECTORS.join(",")).remove();
+function removeCommentsSkippingIframes($, $node) {
+  $node.contents().each((_, node) => {
+    if (node.type === "comment") {
+      $(node).remove();
+      return;
+    }
 
-  // remove comments
-  $root
-    .add($root.find("*"))
-    .contents()
-    .each((_, node) => {
-      if (node?.type === "comment") $(node).remove();
-    });
+    if (node.type === "tag") {
+      // ⛔ boundary: không đi vào iframe
+      if (node.name === "iframe") return;
 
-  // iframe filtering (sau khi ads đã gone)
-  cleanIframes($, $root);
+      removeCommentsSkippingIframes($, $(node));
+    }
+  });
+}
+
+function cloneRootWithoutIframes($root) {
+  const $clone = $root.clone();
+
+  // xoá toàn bộ iframe trong clone
+  $clone.find("iframe").remove();
+
+  return $clone;
 }
 
 function cleanArticleHtml(html, opts = {}) {
@@ -301,6 +320,9 @@ function cleanArticleHtml(html, opts = {}) {
 
   // drop noisy nodes
   $("script,noscript,style,svg,canvas,form,nav,header,footer,aside").remove();
+
+  // 2️⃣ remove ad iframes EARLY
+  removeAdIframesEarly($);
 
   // pick root
   const $root = pickMainRoot($);
@@ -311,7 +333,7 @@ function cleanArticleHtml(html, opts = {}) {
   const thumbResult = handleFeaturedImage($, $root, featuredImage);
   console.log("Reason: ", thumbResult.reason);
 
-  const snippet = buildSnippet($root.text());
+  const snippet = buildSnippet(cloneRootWithoutIframes($root).text());
   const htmlClean = $root.html() || "";
 
   return { htmlClean, snippet, thumb: thumbResult };
