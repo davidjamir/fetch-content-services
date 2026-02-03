@@ -1,106 +1,5 @@
 const cheerio = require("cheerio");
 
-function toStr(x) {
-  return String(x ?? "").trim();
-}
-
-function removeLinks(text) {
-  if (!text) return "";
-
-  return (
-    String(text)
-      // remove http / https links
-      .replace(/https?:\/\/[^\s)>\]"'}]+/gi, "")
-      // cleanup extra spaces
-      .replace(/\s{2,}/g, " ")
-      .trim()
-  );
-}
-
-function normImgUrl(u) {
-  u = toStr(u).replace(/&amp;/g, "&");
-  if (!u) return "";
-  u = u.split("#")[0].split("?")[0];
-  return u.replace(/\/+$/, "");
-}
-
-function ensureOgImageInRoot($, $root, ogImage, opts = {}) {
-  const addThumb = !!opts.addThumb;
-  ogImage = toStr(ogImage);
-
-  if (!addThumb) return { added: false, reason: "disabled" };
-  if (!ogImage) return { added: false, reason: "no_og_image" };
-  if (!$root || !$root.length) return { added: false, reason: "no_root" };
-
-  const firstSrc = toStr($root.find("img").first().attr("src"));
-  const same100 =
-    normImgUrl(firstSrc) && normImgUrl(firstSrc) === normImgUrl(ogImage);
-
-  if (same100) return { added: false, reason: "already_first_img" };
-
-  $root.prepend(
-    `<div class="og-thumb" style="margin:0 0 12px;">
-      <img src="${ogImage}" alt="" style="max-width:100%;height:auto;border-radius:12px;" />
-    </div>`,
-  );
-
-  return { added: true, reason: "prepended" };
-}
-
-function cutPointerPrefixAnywhere(snippet) {
-  let s = toStr(snippet);
-  if (!s) return "";
-
-  // normalize
-  s = s
-    .replace(/[\u0000-\u001F\u007F]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  // remove any fragment like "*]:pointer...>"
-  s = s.replace(/\*?\]?:pointer[^>]*>/gi, " ");
-
-  return s.replace(/\s+/g, " ").trim();
-}
-
-function buildSnippet(text, maxLen = 290) {
-  let s = toStr(removeLinks(text));
-  s = cutPointerPrefixAnywhere(s);
-  s = s.replace(/\s+/g, " ").trim();
-  if (s.length > maxLen) {
-    s = s.slice(0, maxLen - 1).trimEnd() + "…";
-  }
-  return s;
-}
-
-function pickNestedMainArticle($) {
-  let best = null;
-  let bestScore = 0;
-
-  $("article").each((_, el) => {
-    const $el = $(el);
-
-    // Nếu chứa article con → thường là wrapper
-    const nestedCount = $el.find("article").length;
-    if (nestedCount > 0) return;
-
-    const text = $el.text().trim();
-    if (text.length < 300) return;
-
-    const pCount = $el.find("p").length;
-    const imgCount = $el.find("img").length;
-
-    const score = text.length + pCount * 100 + imgCount * 30;
-
-    if (score > bestScore) {
-      bestScore = score;
-      best = $el;
-    }
-  });
-
-  return best;
-}
-
 const AD_SELECTORS = [
   // google ads + generic ads
   ".ads",
@@ -144,6 +43,19 @@ const AD_SELECTORS = [
   ".consent",
 ];
 
+const VIDEO_IFRAME_HOSTS = [
+  "youtube.com",
+  "youtu.be",
+  "youtube-nocookie.com",
+  "vimeo.com",
+  "player.vimeo.com",
+  "facebook.com",
+  "fb.watch",
+  "tiktok.com",
+  "player.tiktok.com",
+  "dailymotion.com",
+];
+
 const REMOVE_CLASSES = [
   "code-block",
   "cat-links",
@@ -155,58 +67,223 @@ const REMOVE_CLASSES = [
   "recommended-thumbnail",
   "recommended-wrapper",
   "categories",
-  
+
   // thêm class của mày vào đây
 ];
 
-function cleanArticleHtml(html, opts = {}) {
-  const featuredImage = toStr(opts.featuredImage);
-  const addThumb = !!opts.addThumb;
-  const $ = cheerio.load(html);
+/*
+ *
+ * Clean Description
+ *
+ */
 
-  // drop noisy nodes
-  $(
-    "script,noscript,style,iframe,svg,canvas,form,nav,header,footer,aside",
-  ).remove();
+function toStr(x) {
+  return String(x ?? "").trim();
+}
 
-  let $root = null;
+function removeLinks(text) {
+  if (!text) return "";
 
-  // 1️⃣ Ưu tiên pick article chính bằng scoring (article lồng nhau)
-  const $mainArticle = pickNestedMainArticle($);
-  if ($mainArticle && $mainArticle.length) {
-    $root = $mainArticle;
+  return (
+    String(text)
+      // remove http / https links
+      .replace(/https?:\/\/[^\s)>\]"'}]+/gi, "")
+      // cleanup extra spaces
+      .replace(/\s{2,}/g, " ")
+      .trim()
+  );
+}
+
+function cutPointerPrefixAnywhere(s) {
+  if (!s) return "";
+
+  // remove any fragment like "*]:pointer...>"
+  s = s.replace(/\*?\]?:pointer[^>]*>/gi, " ");
+
+  return s.replace(/\s+/g, " ").trim();
+}
+
+function buildSnippet(text, maxLen = 290) {
+  let s = toStr(text);
+
+  // 1. remove links
+  s = removeLinks(s);
+
+  // 2. normalize control chars + spaces
+  s = s
+    .replace(/[\u0000-\u001F\u007F]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // 3. remove pointer garbage
+  s = cutPointerPrefixAnywhere(s);
+
+  if (s.length > maxLen) {
+    s = s.slice(0, maxLen - 1).trimEnd() + "…";
+  }
+  return s;
+}
+
+/*
+ *
+ * Checking Featured Image
+ *
+ */
+
+function normImgUrl(u) {
+  u = toStr(u).replace(/&amp;/g, "&");
+  if (!u) return "";
+  u = u.split("#")[0].split("?")[0];
+  return u.replace(/\/+$/, "");
+}
+
+function getHost(u) {
+  try {
+    return new URL(u).host;
+  } catch {
+    return "";
+  }
+}
+
+function imageIdentityTokens(u) {
+  return u
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .split(/[\/\-_.]/)
+    .filter(Boolean);
+}
+
+function sameImageBySemanticIdentity(a, b) {
+  const ua = normImgUrl(a);
+  const ub = normImgUrl(b);
+  if (!ua || !ub) return false;
+  if (getHost(ua) !== getHost(ub)) return false;
+
+  const A = imageIdentityTokens(ua);
+  const B = imageIdentityTokens(ub);
+  if (A.length <= 1 || B.length <= 1) return false;
+
+  const setA = new Set(A);
+  const setB = new Set(B);
+
+  let same = 0;
+  for (const t of setA) {
+    if (setB.has(t)) same++;
   }
 
-  // 2️⃣ Fallback nếu không tìm được article hợp lệ
-  if (!$root) {
-    const candidates = [
-      "main",
-      "[role=main]",
-      ".post",
-      ".entry-content",
-      ".article-content",
-      "article", // để article cuối cùng
-    ];
+  const minLen = Math.min(A.length, B.length);
+  const maxLen = Math.max(A.length, B.length);
 
-    for (const sel of candidates) {
-      const el = $(sel).first();
-      if (el && el.length) {
-        $root = el;
-        break;
-      }
+  const overlapRatio = same / minLen;
+  const lengthRatio = minLen / maxLen;
+
+  return (
+    overlapRatio >= 0.8 && // gần như chứa trọn
+    lengthRatio >= 0.5 // không được chênh lệch quá lớn
+  );
+}
+
+function handleFeaturedImage($, $root, ogImage) {
+  if (!ogImage) return { added: false, reason: "no_og_image" };
+
+  const $firstImg = $root.find("img").first();
+  const firstSrc = toStr($firstImg.attr("src"));
+
+  console.log(ogImage);
+  console.log(firstSrc);
+
+  if (firstSrc && sameImageBySemanticIdentity(firstSrc, ogImage)) {
+    // ảnh đầu đã là featured → không làm gì cả
+    return { added: false, reason: "same_image" };
+  }
+
+  // prepend og image
+  $root.prepend(
+    `<div class="og-thumb" style="margin:0 0 12px">
+      <img src="${ogImage}" style="max-width:100%;height:auto;border-radius:12px" />
+    </div>`,
+  );
+
+  return { added: true, reason: "prepended" };
+}
+
+/*
+ *
+ * Clean HTML
+ *
+ */
+
+function pickNestedMainArticle($) {
+  let best = null;
+  let bestScore = 0;
+
+  $("article").each((_, el) => {
+    const $el = $(el);
+
+    // Nếu chứa article con → thường là wrapper
+    const nestedCount = $el.find("article").length;
+    if (nestedCount > 0) return;
+
+    const text = $el.text().trim();
+    if (text.length < 300) return;
+
+    const pCount = $el.find("p").length;
+    const imgCount = $el.find("img").length;
+
+    const score = text.length + pCount * 100 + imgCount * 30;
+
+    if (score > bestScore) {
+      bestScore = score;
+      best = $el;
     }
+  });
+
+  return best;
+}
+
+function pickMainRoot($) {
+  const $article = pickNestedMainArticle($);
+  if ($article && $article.length) return $article;
+
+  const candidates = [
+    "main",
+    "article",
+    ".article-content",
+    ".entry-content",
+    "[role=main]",
+    ".post",
+  ];
+
+  for (const sel of candidates) {
+    const el = $(sel).first();
+    if (el && el.length) return el;
   }
 
-  // 3️⃣ Fallback cuối
-  if (!$root) $root = $("body").first();
-  if (!$root || !$root.length) $root = $.root();
+  return $("body").first().length ? $("body").first() : $.root();
+}
 
-  // 4️⃣ Clean trong phạm vi root
+function cleanIframes($, $root) {
+  $root.find("iframe").each((_, el) => {
+    const src = toStr($(el).attr("src")).toLowerCase();
+
+    if (!src) {
+      $(el).remove();
+      return;
+    }
+
+    const isVideo = VIDEO_IFRAME_HOSTS.some((h) => src.includes(h));
+
+    if (!isVideo) {
+      $(el).remove();
+    }
+  });
+}
+
+function cleanRoot($, $root) {
   $root.find(REMOVE_CLASSES.map((c) => `.${c}`).join(",")).remove();
-  // apply within root only to avoid nuking whole page unnecessarily
   $root.find(AD_SELECTORS.join(",")).remove();
 
-  // remove HTML comments: <!-- ... -->
+  // remove comments
   $root
     .add($root.find("*"))
     .contents()
@@ -214,13 +291,29 @@ function cleanArticleHtml(html, opts = {}) {
       if (node?.type === "comment") $(node).remove();
     });
 
-  const thumbResult = ensureOgImageInRoot($, $root, featuredImage, {
-    addThumb,
-  });
+  // iframe filtering (sau khi ads đã gone)
+  cleanIframes($, $root);
+}
 
-  const text = $root.text();
-  const snippet = buildSnippet(text);
+function cleanArticleHtml(html, opts = {}) {
+  const featuredImage = toStr(opts.featuredImage);
+  const $ = cheerio.load(html);
+
+  // drop noisy nodes
+  $("script,noscript,style,svg,canvas,form,nav,header,footer,aside").remove();
+
+  // pick root
+  const $root = pickMainRoot($);
+
+  // clean inside root
+  cleanRoot($, $root);
+
+  const thumbResult = handleFeaturedImage($, $root, featuredImage);
+  console.log("Reason: ", thumbResult.reason);
+
+  const snippet = buildSnippet($root.text());
   const htmlClean = $root.html() || "";
+
   return { htmlClean, snippet, thumb: thumbResult };
 }
 
