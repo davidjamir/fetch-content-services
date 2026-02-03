@@ -319,7 +319,7 @@ function cleanArticleHtml(html, opts = {}) {
   const $ = cheerio.load(html);
 
   // drop noisy nodes
-  $("script,noscript,style,svg,canvas,form,nav,header,footer,aside").remove();
+  $("script,noscript,iframe,style,svg,canvas,form,nav,header,footer,aside").remove();
 
   // 2️⃣ remove ad iframes EARLY
   removeAdIframesEarly($);
