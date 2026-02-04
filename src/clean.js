@@ -71,6 +71,26 @@ const REMOVE_CLASSES = [
   // thêm class của mày vào đây
 ];
 
+const DROP_TYPES = new Set(["script", "noscript", "style"]);
+const DROP_NAMES = new Set([
+  "svg",
+  "canvas",
+  "form",
+  "nav",
+  "header",
+  "footer",
+  "aside",
+  "ins",
+]);
+
+const REMOVE_CLASS_SET = new Set(
+  REMOVE_CLASSES.map((c) => c.toLowerCase()).concat(
+    AD_SELECTORS.filter((s) => s.startsWith(".")).map((s) =>
+      s.slice(1).toLowerCase(),
+    ),
+  ),
+);
+
 /*
  *
  * Clean Description
@@ -183,11 +203,10 @@ function sameImageBySemanticIdentity(a, b) {
   );
 }
 
-function handleFeaturedImage($, $root, ogImage) {
+function handleFeaturedImage($root, ogImage, firstImg) {
   if (!ogImage) return { added: false, reason: "no_og_image" };
 
-  const $firstImg = cloneRootWithoutIframes($root).find("img").first();
-  const firstSrc = toStr($firstImg.attr("src"));
+  const firstSrc = toStr(firstImg);
 
   console.log(ogImage);
   console.log(firstSrc);
@@ -213,38 +232,10 @@ function handleFeaturedImage($, $root, ogImage) {
  *
  */
 
-function pickNestedMainArticle($) {
-  let best = null;
-  let bestScore = 0;
-
-  $("article").each((_, el) => {
-    const $el = $(el);
-
-    const $probe = cloneRootWithoutIframes($el);
-
-    // Nếu chứa article con → thường là wrapper
-    if ($probe.find("article").length > 0) return;
-
-    const text = $probe.text().trim();
-    if (text.length < 300) return;
-
-    const pCount = $probe.find("p").length;
-    const imgCount = $probe.find("img").length;
-
-    const score = text.length + pCount * 100 + imgCount * 30;
-
-    if (score > bestScore) {
-      bestScore = score;
-      best = $el;
-    }
-  });
-
-  return best;
-}
-
-function pickMainRoot($) {
-  const $article = pickNestedMainArticle($);
-  if ($article && $article.length) return $article;
+function pickMainRoot($, ctx) {
+  if (ctx.articles.length > 0) {
+    return $(ctx.articles.reduce((a, b) => (b.score > a.score ? b : a)).node);
+  }
 
   const candidates = [
     "main",
@@ -263,77 +254,151 @@ function pickMainRoot($) {
   return $("body").first().length ? $("body").first() : $.root();
 }
 
-function cleanRoot($, $root) {
-  const REMOVE_SELECTOR = [
-    ...REMOVE_CLASSES.map((c) => `.${c}`),
-    ...AD_SELECTORS,
-  ].join(",");
-  $root.find(REMOVE_SELECTOR).remove();
-
-  // remove comments
-  removeCommentsSkippingIframes($, $root);
+function removeNode(node) {
+  const p = node.parent;
+  if (!p || !p.children) return;
+  p.children = p.children.filter((n) => n !== node);
 }
 
-function removeAdIframesEarly($) {
-  $("iframe").each((_, el) => {
-    const src = toStr($(el).attr("src")).toLowerCase();
-    if (!src) {
-      $(el).remove();
-      return;
-    }
+function dfs(node, ctx) {
+  if (!node) return { hasArticle: false };
 
-    const isVideo = VIDEO_IFRAME_HOSTS.some((h) => src.includes(h));
+  if (node.type === "root") {
+    let hasArticle = false;
+    for (const c of node.children || []) {
+      if (dfs(c, ctx).hasArticle) hasArticle = true;
+    }
+    return { hasArticle };
+  }
+
+  // ===============================
+  // 👇 CHỖ MÀY VIẾT LOGIC XỬ LÝ
+  // ví dụ:
+  // if (node.type === "comment") { ... }
+  // if (node.type === "tag" && node.name === "iframe") { ... }
+  // if (node.name === "article") { ... }
+  // if (node.name === "img") { ... }
+  // ===============================
+
+  // DROP BY TYPE (🔥 CỰC SỚM)
+  if (DROP_TYPES.has(node.type)) {
+    removeNode(node);
+    return { hasArticle: false };
+  }
+
+  // ===== COMMENT =====
+  if (node.type === "comment") {
+    removeNode(node);
+    return { hasArticle: false };
+  }
+
+  // TEXT
+  if (node.type === "text") {
+    return { hasArticle: false, textLen: (node.data || "").trim().length };
+  }
+
+  // TỪ ĐÂY TRỞ XUỐNG: CHỈ CÒN TAG
+  if (node.type !== "tag") {
+    return { hasArticle: false };
+  }
+
+  // DROP BY NAME
+  if (DROP_NAMES.has(node.name)) {
+    removeNode(node);
+    return { hasArticle: false };
+  }
+
+  // ===== IFRAME =====
+  if (node.name === "iframe") {
+    const src = (node.attribs?.src || "").toLowerCase();
+    const isVideo = src && VIDEO_IFRAME_HOSTS.some((h) => src.includes(h));
+
     if (!isVideo) {
-      $(el).remove();
-    }
-  });
-}
-
-function removeCommentsSkippingIframes($, $node) {
-  $node.contents().each((_, node) => {
-    if (node.type === "comment") {
-      $(node).remove();
-      return;
+      removeNode(node);
     }
 
-    if (node.type === "tag") {
-      // ⛔ boundary: không đi vào iframe
-      if (node.name === "iframe") return;
+    return { hasArticle: false };
+  }
 
-      removeCommentsSkippingIframes($, $(node));
+  // ===== REMOVE BY CLASS =====
+  const classAttr = node.attribs?.class;
+  if (classAttr) {
+    const classes = classAttr.toLowerCase().split(/\s+/);
+    for (const c of classes) {
+      if (REMOVE_CLASS_SET.has(c)) {
+        removeNode(node);
+        return { hasArticle: false }; // ⛔ cắt subtree
+      }
     }
-  });
-}
+  }
 
-function cloneRootWithoutIframes($root) {
-  const $clone = $root.clone();
+  // ===== FIRST IMG =====
+  let imgCount = 0;
+  if (node.name === "img") {
+    imgCount = 1;
+    if (!ctx.firstImg) {
+      const src = node.attribs?.src;
+      if (src) ctx.firstImg = src;
+    }
+  }
 
-  // xoá toàn bộ iframe trong clone
-  $clone.find("iframe").remove();
+  let textLen = 0;
+  let pCount = node.name === "p" ? 1 : 0;
+  let hasArticleBelow = false;
 
-  return $clone;
+  // ===== WALK CHILDREN =====
+  for (const child of node.children || []) {
+    const res = dfs(child, ctx);
+
+    if (res?.hasArticle) hasArticleBelow = true;
+    textLen += res?.textLen || 0;
+    pCount += res?.pCount || 0;
+    imgCount += res?.imgCount || 0;
+  }
+
+  // ===== ARTICLE NODE =====
+  if (node.name === "article") {
+    if (!hasArticleBelow) {
+      const score = textLen + pCount * 100 + imgCount * 30;
+
+      ctx.articles.push({
+        node,
+        score,
+        textLen,
+        pCount,
+        imgCount,
+      });
+    }
+  }
+
+  const isArticle = node.name === "article";
+
+  return {
+    hasArticle: hasArticleBelow || isArticle,
+    textLen,
+    pCount,
+    imgCount,
+  };
 }
 
 function cleanArticleHtml(html, opts = {}) {
   const featuredImage = toStr(opts.featuredImage);
   const $ = cheerio.load(html);
 
-  // drop noisy nodes
-  $("script,noscript,iframe,style,svg,canvas,form,nav,header,footer,aside").remove();
+  const ctx = {
+    articles: [],
+    firstImg: null,
+  };
 
-  // 2️⃣ remove ad iframes EARLY
-  removeAdIframesEarly($);
+  dfs($.root()[0], ctx);
 
   // pick root
-  const $root = pickMainRoot($);
+  const $root = pickMainRoot($, ctx);
 
-  // clean inside root
-  cleanRoot($, $root);
-
-  const thumbResult = handleFeaturedImage($, $root, featuredImage);
+  const thumbResult = handleFeaturedImage($root, featuredImage, ctx.firstImg);
   console.log("Reason: ", thumbResult.reason);
 
-  const snippet = buildSnippet(cloneRootWithoutIframes($root).text());
+  const snippet = buildSnippet($root.text());
   const htmlClean = $root.html() || "";
 
   return { htmlClean, snippet, thumb: thumbResult };
