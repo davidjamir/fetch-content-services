@@ -47,10 +47,6 @@ module.exports = async (req, res) => {
     const mode = normalizeMode(sp.get("mode") || "json");
     const targetUrl = sp.get("url") || ""; // URL bài gốc
 
-    const addThumb = ["1", "true", "yes", "add"].includes(
-      (sp.get("thumb") || "").toLowerCase(),
-    );
-
     if (!targetUrl)
       return res.status(400).json({ ok: false, error: "Missing url" });
 
@@ -62,7 +58,6 @@ module.exports = async (req, res) => {
     const meta = extractMeta(rawHtml, targetUrl);
     const cleaned = cleanArticleHtml(rawHtml, {
       featuredImage: meta.featuredImage || "",
-      addThumb,
     });
 
     if (mode === "raw") {
