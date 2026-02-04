@@ -260,6 +260,12 @@ function removeNode(node) {
   p.children = p.children.filter((n) => n !== node);
 }
 
+function findFirstImgInRoot($root) {
+  const img = $root.find("img").not(".lazy, .ads, .tracker").first();
+  if (!img || !img.length) return "";
+  return img.attr("src") || "";
+}
+
 function dfs(node, ctx) {
   if (!node) return { hasArticle: false };
 
@@ -334,14 +340,6 @@ function dfs(node, ctx) {
 
   // ===== FIRST IMG =====
   let imgCount = 0;
-  if (node.name === "img") {
-    imgCount = 1;
-    if (!ctx.firstImg) {
-      const src = node.attribs?.src;
-      if (src) ctx.firstImg = src;
-    }
-  }
-
   let textLen = 0;
   let pCount = node.name === "p" ? 1 : 0;
   let hasArticleBelow = false;
@@ -387,7 +385,6 @@ function cleanArticleHtml(html, opts = {}) {
 
   const ctx = {
     articles: [],
-    firstImg: null,
   };
 
   dfs($.root()[0], ctx);
@@ -395,7 +392,10 @@ function cleanArticleHtml(html, opts = {}) {
   // pick root
   const $root = pickMainRoot($, ctx);
 
-  const thumbResult = handleFeaturedImage($root, featuredImage, ctx.firstImg);
+  // 🔥 LẤY LẠI FIRST IMG TỪ ROOT SAU CLEAN
+  const firstImg = findFirstImgInRoot($root);
+
+  const thumbResult = handleFeaturedImage($root, featuredImage, firstImg);
   console.log("Reason: ", thumbResult.reason);
 
   const snippet = buildSnippet($root.text());
