@@ -220,7 +220,7 @@ function handleFeaturedImage($root, ogImage) {
 
   // prepend og image
   $root.prepend(
-    `<div class="og-thumb" style="margin:0 0 12px">
+    `<div class="og-thumb" style="margin:0 0 12px;display:flex;justify-content:center">
       <img src="${ogImage}" style="max-width:100%;height:auto;border-radius:12px" />
     </div>`,
   );
