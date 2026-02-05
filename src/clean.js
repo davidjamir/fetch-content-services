@@ -67,12 +67,14 @@ const REMOVE_CLASSES = [
   "recommended-thumbnail",
   "recommended-wrapper",
   "categories",
+  "clearfix"
 
   // thêm class của mày vào đây
 ];
 
 const DROP_TYPES = new Set(["script", "noscript", "style"]);
 const DROP_NAMES = new Set([
+  "h1",
   "svg",
   "canvas",
   "form",
