@@ -16,6 +16,7 @@ const AD_SELECTORS = [
   ".advertising",
   ".banner-ad",
   ".ad-banner",
+  ".ads-inline",
 
   // sponsor/promo
   ".sponsor",
@@ -67,7 +68,7 @@ const REMOVE_CLASSES = [
   "recommended-thumbnail",
   "recommended-wrapper",
   "categories",
-  "clearfix"
+  "clearfix",
 
   // thêm class của mày vào đây
 ];
