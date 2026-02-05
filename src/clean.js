@@ -203,17 +203,19 @@ function sameImageBySemanticIdentity(a, b) {
   );
 }
 
-function handleFeaturedImage($root, ogImage, firstImg) {
-  if (!ogImage) return { added: false, reason: "no_og_image" };
+function handleFeaturedImage($root, ogImage) {
+  let reason = "no_og_image";
+  if (!ogImage) return { added: false, reason };
 
-  const firstSrc = toStr(firstImg);
+  const firstImg = $root.find("img").first();
+  const firstSrc = toStr(firstImg.attr("src") || "");
 
   console.log(ogImage);
   console.log(firstSrc);
 
   if (firstSrc && sameImageBySemanticIdentity(firstSrc, ogImage)) {
-    // ảnh đầu đã là featured → không làm gì cả
-    return { added: false, reason: "same_image" };
+    reason = "same_image";
+    firstImg.remove();
   }
 
   // prepend og image
@@ -223,7 +225,7 @@ function handleFeaturedImage($root, ogImage, firstImg) {
     </div>`,
   );
 
-  return { added: true, reason: "prepended" };
+  return { added: true, reason };
 }
 
 /*
@@ -258,12 +260,6 @@ function removeNode(node) {
   const p = node.parent;
   if (!p || !p.children) return;
   p.children = p.children.filter((n) => n !== node);
-}
-
-function findFirstImgInRoot($root) {
-  const img = $root.find("img").not(".lazy, .ads, .tracker").first();
-  if (!img || !img.length) return "";
-  return img.attr("src") || "";
 }
 
 function dfs(node, ctx) {
@@ -392,10 +388,7 @@ function cleanArticleHtml(html, opts = {}) {
   // pick root
   const $root = pickMainRoot($, ctx);
 
-  // 🔥 LẤY LẠI FIRST IMG TỪ ROOT SAU CLEAN
-  const firstImg = findFirstImgInRoot($root);
-
-  const thumbResult = handleFeaturedImage($root, featuredImage, firstImg);
+  const thumbResult = handleFeaturedImage($root, featuredImage);
   console.log("Reason: ", thumbResult.reason);
 
   const snippet = buildSnippet($root.text());
