@@ -1,5 +1,19 @@
 const cheerio = require("cheerio");
 
+const REMOVE_KEYWORDS = [
+  "qcimg",
+  "adsconex",
+  "mgid",
+  "banner",
+  "parallax",
+  "adsense",
+  "doubleclick",
+  "adservice",
+  "taboola",
+  "outbrain",
+  "revcontent",
+];
+
 const AD_SELECTORS = [
   // google ads + generic ads
   ".ads",
@@ -62,6 +76,7 @@ const REMOVE_CLASSES = [
   "cat-links",
   "entry-meta",
   "entry-labels",
+  "entry-tags",
   "post-share",
   "breadcrumbs-nav",
   "header",
@@ -69,6 +84,7 @@ const REMOVE_CLASSES = [
   "recommended-wrapper",
   "categories",
   "clearfix",
+  // "breadcrumbs",
 
   // thêm class của mày vào đây
 ];
@@ -76,6 +92,7 @@ const REMOVE_CLASSES = [
 const DROP_TYPES = new Set(["script", "noscript", "style"]);
 const DROP_NAMES = new Set([
   "h1",
+  "hr",
   "svg",
   "canvas",
   "form",
@@ -168,6 +185,11 @@ function getHost(u) {
   }
 }
 
+function hasRemoveKeyword(str = "") {
+  const s = str.toLowerCase();
+  return REMOVE_KEYWORDS.some((k) => s.includes(k));
+}
+
 function imageIdentityTokens(u) {
   return u
     .toLowerCase()
@@ -243,12 +265,12 @@ function pickMainRoot($, ctx) {
   }
 
   const candidates = [
-    "main",
-    "article",
-    ".article-content",
     ".entry-content",
-    "[role=main]",
     ".post",
+    ".article-content",
+    "article",
+    "[role=main]",
+    "main",
   ];
 
   for (const sel of candidates) {
@@ -260,6 +282,7 @@ function pickMainRoot($, ctx) {
 }
 
 function removeNode(node) {
+  console.log(node.name);
   const p = node.parent;
   if (!p || !p.children) return;
   p.children = p.children.filter((n) => n !== node);
@@ -327,6 +350,8 @@ function dfs(node, ctx) {
 
   // ===== REMOVE BY CLASS =====
   const classAttr = node.attribs?.class;
+  const idAttr = node.attribs?.id || "";
+
   if (classAttr) {
     const classes = classAttr.toLowerCase().split(/\s+/);
     for (const c of classes) {
@@ -335,6 +360,11 @@ function dfs(node, ctx) {
         return { hasArticle: false }; // ⛔ cắt subtree
       }
     }
+  }
+
+  if (hasRemoveKeyword(classAttr) || hasRemoveKeyword(idAttr)) {
+    removeNode(node);
+    return { hasArticle: false };
   }
 
   // ===== FIRST IMG =====
@@ -387,6 +417,7 @@ function cleanArticleHtml(html, opts = {}) {
   };
 
   dfs($.root()[0], ctx);
+  console.log(ctx);
 
   // pick root
   const $root = pickMainRoot($, ctx);
