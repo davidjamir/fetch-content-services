@@ -12,6 +12,9 @@ const REMOVE_KEYWORDS = [
   "taboola",
   "outbrain",
   "revcontent",
+
+  "post-extra-info",
+  "share-buttons-bottom"
 ];
 
 const AD_SELECTORS = [
@@ -85,7 +88,7 @@ const REMOVE_CLASSES = [
   "recommended-wrapper",
   "categories",
   // "clearfix",
-  // "breadcrumbs",
+  "breadcrumbs",
 
   // thêm class của mày vào đây
 ];
