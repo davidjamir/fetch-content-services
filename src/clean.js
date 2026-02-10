@@ -84,8 +84,8 @@ const REMOVE_CLASSES = [
   "recommended-thumbnail",
   "recommended-wrapper",
   "categories",
-  "clearfix",
-  "breadcrumbs",
+  // "clearfix",
+  // "breadcrumbs",
 
   // thêm class của mày vào đây
 ];
