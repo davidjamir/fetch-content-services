@@ -69,6 +69,7 @@ const VIDEO_IFRAME_HOSTS = [
   "tiktok.com",
   "player.tiktok.com",
   "dailymotion.com",
+  "twitter.com",
 ];
 
 const REMOVE_CLASSES = [
@@ -84,7 +85,7 @@ const REMOVE_CLASSES = [
   "recommended-wrapper",
   "categories",
   "clearfix",
-  // "breadcrumbs",
+  "breadcrumbs",
 
   // thêm class của mày vào đây
 ];
@@ -282,7 +283,6 @@ function pickMainRoot($, ctx) {
 }
 
 function removeNode(node) {
-  console.log(node.name);
   const p = node.parent;
   if (!p || !p.children) return;
   p.children = p.children.filter((n) => n !== node);
@@ -417,7 +417,6 @@ function cleanArticleHtml(html, opts = {}) {
   };
 
   dfs($.root()[0], ctx);
-  console.log(ctx);
 
   // pick root
   const $root = pickMainRoot($, ctx);
