@@ -271,10 +271,10 @@ function handleFeaturedImage($root, ogImage) {
 function pickMainRoot($) {
   const candidates = [
     "main",
-    "[role=main]",
     ".entry-content",
     ".post-content",
     ".article-content",
+    "[role=main]",
     ".post",
   ];
 
@@ -355,6 +355,7 @@ function dfs(node) {
     const isVideo = src && VIDEO_IFRAME_HOSTS.some((h) => src.includes(h));
 
     if (!isVideo) {
+      console.log("Removed Iframe: ", src);
       removeNode(node);
     }
     return;
