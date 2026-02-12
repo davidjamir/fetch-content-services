@@ -1,8 +1,5 @@
 const cheerio = require("cheerio");
 
-/* ===============================
-   CONFIG
-================================ */
 const REMOVE_KEYWORDS = [
   "qcimg",
   "adsconex",
@@ -17,7 +14,7 @@ const REMOVE_KEYWORDS = [
   "revcontent",
 
   "post-extra-info",
-  "share-buttons-bottom",
+  "share-buttons-bottom"
 ];
 
 const AD_SELECTORS = [
@@ -90,10 +87,8 @@ const REMOVE_CLASSES = [
   "recommended-thumbnail",
   "recommended-wrapper",
   "categories",
+  // "clearfix",
   "breadcrumbs",
-  "bs-breadcrumb-section",
-  "bs-related-post-info",
-  "bs-header",
 
   // thêm class của mày vào đây
 ];
@@ -268,14 +263,18 @@ function handleFeaturedImage($root, ogImage) {
  *
  */
 
-function pickMainRoot($) {
+function pickMainRoot($, ctx) {
+  if (ctx.articles.length > 0) {
+    return $(ctx.articles.reduce((a, b) => (b.score > a.score ? b : a)).node);
+  }
+
   const candidates = [
-    "main",
-    "[role=main]",
     ".entry-content",
-    ".post-content",
-    ".article-content",
     ".post",
+    ".article-content",
+    "article",
+    "[role=main]",
+    "main",
   ];
 
   for (const sel of candidates) {
@@ -292,61 +291,52 @@ function removeNode(node) {
   p.children = p.children.filter((n) => n !== node);
 }
 
-function unwrapNode(node) {
-  const parent = node.parent;
-  if (!parent || !parent.children) return;
+function dfs(node, ctx) {
+  if (!node) return { hasArticle: false };
 
-  const idx = parent.children.indexOf(node);
-  if (idx === -1) return;
-
-  const children = node.children || [];
-
-  for (const child of children) {
-    child.parent = parent;
-  }
-
-  parent.children.splice(idx, 1, ...children);
-}
-
-function dfs(node) {
-  if (!node) return;
-
-  // ROOT
   if (node.type === "root") {
+    let hasArticle = false;
     for (const c of node.children || []) {
-      dfs(c);
+      if (dfs(c, ctx).hasArticle) hasArticle = true;
     }
-    return;
+    return { hasArticle };
   }
 
-  // ===== DROP SỚM (KHÔNG CẦN DUYỆT CON) =====
+  // ===============================
+  // 👇 CHỖ MÀY VIẾT LOGIC XỬ LÝ
+  // ví dụ:
+  // if (node.type === "comment") { ... }
+  // if (node.type === "tag" && node.name === "iframe") { ... }
+  // if (node.name === "article") { ... }
+  // if (node.name === "img") { ... }
+  // ===============================
 
   // DROP BY TYPE (🔥 CỰC SỚM)
   if (DROP_TYPES.has(node.type)) {
     removeNode(node);
-    return;
+    return { hasArticle: false };
   }
 
   // ===== COMMENT =====
   if (node.type === "comment") {
     removeNode(node);
-    return;
+    return { hasArticle: false };
   }
 
   // TEXT
   if (node.type === "text") {
-    return;
+    return { hasArticle: false, textLen: (node.data || "").trim().length };
   }
 
   // TỪ ĐÂY TRỞ XUỐNG: CHỈ CÒN TAG
   if (node.type !== "tag") {
-    return;
+    return { hasArticle: false };
   }
 
   // DROP BY NAME
   if (DROP_NAMES.has(node.name)) {
     removeNode(node);
-    return;
+    return { hasArticle: false };
   }
 
   // ===== IFRAME =====
@@ -357,7 +347,8 @@ function dfs(node) {
     if (!isVideo) {
       removeNode(node);
     }
-    return;
+
+    return { hasArticle: false };
   }
 
   // ===== REMOVE BY CLASS =====
@@ -369,45 +360,69 @@ function dfs(node) {
     for (const c of classes) {
       if (REMOVE_CLASS_SET.has(c)) {
         removeNode(node);
-        return;
+        return { hasArticle: false }; // ⛔ cắt subtree
       }
     }
   }
 
   if (hasRemoveKeyword(classAttr) || hasRemoveKeyword(idAttr)) {
     removeNode(node);
-    return;
+    return { hasArticle: false };
   }
 
-  // ===== CHỈ TỚI ĐÂY MỚI DUYỆT CON =====
-  // vì các trường hợp trên đã xử lý xong rồi
+  // ===== FIRST IMG =====
+  let imgCount = 0;
+  let textLen = 0;
+  let pCount = node.name === "p" ? 1 : 0;
+  let hasArticleBelow = false;
 
-  for (const child of [...(node.children || [])]) {
-    dfs(child);
+  // ===== WALK CHILDREN =====
+  for (const child of node.children || []) {
+    const res = dfs(child, ctx);
+
+    if (res?.hasArticle) hasArticleBelow = true;
+    textLen += res?.textLen || 0;
+    pCount += res?.pCount || 0;
+    imgCount += res?.imgCount || 0;
   }
 
-  // ===== POST PROCESS (SAU KHI CON ĐÃ SẠCH) =====
-
-  // unwrap article ở cuối để không phá traversal
+  // ===== ARTICLE NODE =====
   if (node.name === "article") {
-    unwrapNode(node);
-    return;
+    if (!hasArticleBelow) {
+      const score = textLen + pCount * 100 + imgCount * 30;
+
+      ctx.articles.push({
+        node,
+        score,
+        textLen,
+        pCount,
+        imgCount,
+      });
+    }
   }
 
-  if (node.name === "div" && (!node.children || node.children.length === 0)) {
-    removeNode(node);
-    return;
-  }
+  const isArticle = node.name === "article";
+
+  return {
+    hasArticle: hasArticleBelow || isArticle,
+    textLen,
+    pCount,
+    imgCount,
+  };
 }
 
 function cleanArticleHtml(html, opts = {}) {
   const featuredImage = toStr(opts.featuredImage);
   const $ = cheerio.load(html);
 
-  dfs($.root()[0]);
+  const ctx = {
+    articles: [],
+  };
+
+  dfs($.root()[0], ctx);
 
   // pick root
-  const $root = pickMainRoot($);
+  const $root = pickMainRoot($, ctx);
 
   const thumbResult = handleFeaturedImage($root, featuredImage);
   console.log("Reason: ", thumbResult.reason);
