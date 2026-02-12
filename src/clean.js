@@ -270,11 +270,11 @@ function handleFeaturedImage($root, ogImage) {
 
 function pickMainRoot($) {
   const candidates = [
-    "main",
     ".entry-content",
+    "main",
+    "[role=main]",
     ".post-content",
     ".article-content",
-    "[role=main]",
     ".post",
   ];
 
