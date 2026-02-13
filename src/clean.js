@@ -19,6 +19,8 @@ const REMOVE_KEYWORDS = [
   "post-extra-info",
   "share-buttons-bottom",
   "related-post",
+  "system-listing",
+  "system-nav"
 ];
 
 const AD_SELECTORS = [
@@ -85,6 +87,7 @@ const REMOVE_CLASSES = [
   "entry-meta",
   "entry-labels",
   "entry-tags",
+  "entry-related",
   "post-share",
   "breadcrumbs-nav",
   "header",
@@ -273,9 +276,10 @@ function handleFeaturedImage($root, ogImage) {
 
 function pickMainRoot($) {
   const candidates = [
-    ".entry-content",
+    "#main",
     "main",
     "[role=main]",
+    ".entry-content",
     ".post-content",
     ".article-content",
     ".post",
