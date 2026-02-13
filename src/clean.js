@@ -22,6 +22,7 @@ const REMOVE_KEYWORDS = [
   "system-listing",
   "system-nav",
   "comment",
+  "info-author",
 ];
 
 const AD_SELECTORS = [
@@ -319,6 +320,100 @@ function processImage(node) {
   });
 }
 
+function getVideoEmbedInfo(rawUrl, ctx) {
+  if (!rawUrl) return null;
+
+  const url = rawUrl.trim().replace(/&#0?38;/g, "&");
+
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+
+  const host = parsed.hostname.replace(/^www\./, "").toLowerCase();
+
+  // ===== YOUTUBE =====
+  if (
+    host === "youtube.com" ||
+    host === "youtu.be" ||
+    host === "youtube-nocookie.com"
+  ) {
+    let videoId = null;
+
+    if (host === "youtu.be") {
+      videoId = parsed.pathname.slice(1);
+    } else {
+      videoId = parsed.searchParams.get("v");
+
+      if (!videoId) {
+        const parts = parsed.pathname.split("/").filter(Boolean);
+        if (parts[0] === "shorts" || parts[0] === "embed") {
+          videoId = parts[1];
+        }
+      }
+    }
+
+    if (!videoId || videoId.length !== 11) return null;
+
+    const t = parsed.searchParams.get("t");
+    const start = t ? `?start=${t}` : "";
+
+    return {
+      type: "youtube",
+      attribs: {
+        src: `https://www.youtube-nocookie.com/embed/${videoId}${start}`,
+        width: "100%",
+        height: "600",
+        frameborder: "0",
+        allow:
+          "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture",
+        allowfullscreen: "",
+      },
+    };
+  }
+
+  if (host === "vimeo.com") {
+    const id = parsed.pathname.split("/").filter(Boolean)[0];
+    if (!id) return null;
+
+    return {
+      type: "vimeo",
+      attribs: {
+        src: `https://player.vimeo.com/video/${id}`,
+        width: "100%",
+        height: "600",
+        frameborder: "0",
+        allowfullscreen: "",
+      },
+    };
+  }
+
+  if (host === "dailymotion.com") {
+    const match = parsed.pathname.match(/video\/([a-zA-Z0-9]+)/i);
+    if (!match) return null;
+
+    return {
+      type: "dailymotion",
+      attribs: {
+        src: `https://www.dailymotion.com/embed/video/${match[1]}`,
+        width: "100%",
+        height: "600",
+        frameborder: "0",
+        allowfullscreen: "",
+      },
+    };
+  }
+
+  if (host === "twitter.com" || host === "x.com") {
+    ctx.hasTwitter = true;
+    return null;
+  }
+
+  return null;
+}
+
 /*
  *
  * Clean HTML
@@ -366,13 +461,13 @@ function unwrapNode(node) {
   parent.children.splice(idx, 1, ...children);
 }
 
-function dfs(node) {
+function dfs(node, ctx) {
   if (!node) return;
 
   // ROOT
   if (node.type === "root") {
     for (const c of node.children || []) {
-      dfs(c);
+      dfs(c, ctx);
     }
     return;
   }
@@ -414,12 +509,22 @@ function dfs(node) {
 
   // ===== A TAG (KEEP ONLY VIDEO LINKS) =====
   if (node.name === "a") {
-    const href = (node.attribs?.href || "").toLowerCase();
-    const isVideo = href && VIDEO_IFRAME_HOSTS.some((h) => href.includes(h));
-
-    if (!isVideo) {
-      unwrapNode(node); // bỏ thẻ a nhưng giữ nội dung
+    const href = node.attribs?.href || "";
+    const maybeVideo =
+      href && VIDEO_IFRAME_HOSTS.some((h) => href.toLowerCase().includes(h));
+    if (!maybeVideo) {
+      unwrapNode(node);
+      return;
     }
+
+    const video = getVideoEmbedInfo(href, ctx);
+    if (!video) {
+      return;
+    }
+
+    node.name = "iframe";
+    node.attribs = video.attribs;
+    node.children = [];
 
     return;
   }
@@ -430,7 +535,6 @@ function dfs(node) {
     const isVideo = src && VIDEO_IFRAME_HOSTS.some((h) => src.includes(h));
 
     if (!isVideo) {
-      console.log("Removed Iframe: ", src);
       removeNode(node);
     }
     return;
@@ -459,7 +563,7 @@ function dfs(node) {
   // vì các trường hợp trên đã xử lý xong rồi
 
   for (const child of [...(node.children || [])]) {
-    dfs(child);
+    dfs(child, ctx);
   }
 
   // ===== POST PROCESS (SAU KHI CON ĐÃ SẠCH) =====
@@ -480,10 +584,19 @@ function cleanArticleHtml(html, opts = {}) {
   const featuredImage = toStr(opts.featuredImage);
   const $ = cheerio.load(html);
 
-  dfs($.root()[0]);
+  const ctx = {
+    hasTwitter: false,
+  };
+  dfs($.root()[0], ctx);
 
   // pick root
   const $root = pickMainRoot($);
+
+  if (ctx.hasTwitter) {
+    $root.append(
+      '<script async src="https://platform.twitter.com/widgets.js"></script>',
+    );
+  }
 
   const thumbResult = handleFeaturedImage($root, featuredImage);
   console.log("Reason: ", thumbResult.reason);
