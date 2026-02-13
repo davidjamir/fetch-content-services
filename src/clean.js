@@ -20,7 +20,8 @@ const REMOVE_KEYWORDS = [
   "share-buttons-bottom",
   "related-post",
   "system-listing",
-  "system-nav"
+  "system-nav",
+  "comments",
 ];
 
 const AD_SELECTORS = [
@@ -99,7 +100,7 @@ const REMOVE_CLASSES = [
   "bs-related-post-info",
   "bs-header",
   "bs-single-related",
-  "emoji"
+  "emoji",
 
   // thêm class của mày vào đây
 ];
