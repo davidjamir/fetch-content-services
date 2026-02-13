@@ -21,7 +21,7 @@ const REMOVE_KEYWORDS = [
   "related-post",
   "system-listing",
   "system-nav",
-  "comments",
+  "comment",
 ];
 
 const AD_SELECTORS = [
@@ -93,6 +93,7 @@ const REMOVE_CLASSES = [
   "author-box",
   "post-share",
   "breadcrumbs-nav",
+  "breadcrumb",
   "header",
   "recommended-thumbnail",
   "recommended-wrapper",
@@ -103,6 +104,7 @@ const REMOVE_CLASSES = [
   "bs-header",
   "bs-single-related",
   "emoji",
+  "screen-reader-text"
 
   // thêm class của mày vào đây
 ];
@@ -111,6 +113,7 @@ const DROP_TYPES = new Set(["script", "noscript", "style"]);
 const DROP_NAMES = new Set([
   "h1",
   "hr",
+  "a",  // Checking tag here
   "svg",
   "canvas",
   "form",
