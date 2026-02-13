@@ -104,7 +104,7 @@ const REMOVE_CLASSES = [
   "bs-header",
   "bs-single-related",
   "emoji",
-  "screen-reader-text"
+  "screen-reader-text",
 
   // thêm class của mày vào đây
 ];
@@ -113,7 +113,6 @@ const DROP_TYPES = new Set(["script", "noscript", "style"]);
 const DROP_NAMES = new Set([
   "h1",
   "hr",
-  // "a",  // Checking tag here
   "svg",
   "canvas",
   "form",
@@ -359,6 +358,18 @@ function dfs(node) {
   // DROP BY NAME
   if (DROP_NAMES.has(node.name)) {
     removeNode(node);
+    return;
+  }
+
+  // ===== A TAG (KEEP ONLY VIDEO LINKS) =====
+  if (node.name === "a") {
+    const href = (node.attribs?.href || "").toLowerCase();
+    const isVideo = href && VIDEO_IFRAME_HOSTS.some((h) => href.includes(h));
+
+    if (!isVideo) {
+      unwrapNode(node); // bỏ thẻ a nhưng giữ nội dung
+    }
+
     return;
   }
 
