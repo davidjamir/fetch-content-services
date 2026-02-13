@@ -113,7 +113,7 @@ const DROP_TYPES = new Set(["script", "noscript", "style"]);
 const DROP_NAMES = new Set([
   "h1",
   "hr",
-  "a",  // Checking tag here
+  // "a",  // Checking tag here
   "svg",
   "canvas",
   "form",
