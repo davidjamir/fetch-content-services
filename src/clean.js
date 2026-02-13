@@ -18,6 +18,7 @@ const REMOVE_KEYWORDS = [
 
   "post-extra-info",
   "share-buttons-bottom",
+  "related-post",
 ];
 
 const AD_SELECTORS = [
@@ -94,6 +95,7 @@ const REMOVE_CLASSES = [
   "bs-breadcrumb-section",
   "bs-related-post-info",
   "bs-header",
+  "bs-single-related"
 
   // thêm class của mày vào đây
 ];
