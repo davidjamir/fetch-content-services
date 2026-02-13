@@ -273,6 +273,52 @@ function handleFeaturedImage($root, ogImage) {
   return { added: true, reason };
 }
 
+function processImage(node) {
+  const a = node.attribs || {};
+
+  const candidates = [
+    a["data-src"],
+    a["data-original"],
+    a["data-lazy-src"],
+    (a["data-srcset"] || "").split(",").pop()?.trim().split(" ")[0],
+    (a["srcset"] || "").split(",").pop()?.trim().split(" ")[0],
+    a["src"],
+  ].filter(Boolean);
+
+  let src = "";
+
+  for (const url of candidates) {
+    if (
+      !url.startsWith("data:image") && // bỏ base64
+      /^https?:\/\//i.test(url) // phải là http/https
+    ) {
+      src = url;
+      break;
+    }
+  }
+
+  // bỏ base64 placeholder
+  if (!src || src.startsWith("data:image")) {
+    removeNode(node);
+    return;
+  }
+
+  node.attribs.src = src;
+
+  // xoá lazy attrs
+  Object.keys(node.attribs).forEach((k) => {
+    if (
+      k.startsWith("data-") ||
+      k === "srcset" ||
+      k === "sizes" ||
+      k === "loading" ||
+      k === "decoding"
+    ) {
+      delete node.attribs[k];
+    }
+  });
+}
+
 /*
  *
  * Clean HTML
@@ -352,6 +398,11 @@ function dfs(node) {
 
   // TỪ ĐÂY TRỞ XUỐNG: CHỈ CÒN TAG
   if (node.type !== "tag") {
+    return;
+  }
+
+  if (node.name === "img") {
+    processImage(node);
     return;
   }
 
