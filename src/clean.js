@@ -95,7 +95,8 @@ const REMOVE_CLASSES = [
   "bs-breadcrumb-section",
   "bs-related-post-info",
   "bs-header",
-  "bs-single-related"
+  "bs-single-related",
+  "emoji"
 
   // thêm class của mày vào đây
 ];
