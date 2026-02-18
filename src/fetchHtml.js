@@ -81,7 +81,7 @@ async function fetchHtmlLocal(url, { timeoutMs = 12000 } = {}) {
   }
 }
 
-async function fetchHtmlOnline() {}
+// async function fetchHtmlOnline() {}
 
 async function fetchHtmlSmart(url, options) {
   const strategies = [
@@ -93,10 +93,10 @@ async function fetchHtmlSmart(url, options) {
       console.log("Try Crawl Local...");
       return await fetchHtmlLocal(url);
     },
-    async () => {
-      console.log("Try Crawl Online...");
-      return await fetchHtmlOnline(url);
-    },
+    // async () => {
+    //   console.log("Try Crawl Online...");
+    //   return await fetchHtmlOnline(url);
+    // },
   ];
 
   // ===== Nếu có option -> chạy đúng 1 strategy =====
