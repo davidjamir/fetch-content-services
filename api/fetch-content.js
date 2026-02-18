@@ -1,4 +1,4 @@
-const { fetchHtml } = require("../src/fetchHtml");
+const { fetchHtmlSmart } = require("../src/fetchHtml");
 const { extractMeta } = require("../src/extract");
 const { cleanArticleHtml } = require("../src/clean");
 const { renderPreviewPage } = require("../src/renderPreview");
@@ -54,7 +54,7 @@ module.exports = async (req, res) => {
       return res.status(401).json({ ok: false, error: "Unauthorized" });
     }
 
-    const rawHtml = await fetchHtml(targetUrl, { timeoutMs: 15000 });
+    const rawHtml = await fetchHtmlSmart(targetUrl, { timeoutMs: 15000 });
     const meta = extractMeta(rawHtml, targetUrl);
     const cleaned = cleanArticleHtml(rawHtml, {
       featuredImage: meta.featuredImage || "",

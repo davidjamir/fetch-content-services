@@ -1,4 +1,4 @@
-const { fetchHtmlSmart, fetchHtml } = require("../src/fetchHtml");
+const { fetchHtmlSmart } = require("../src/fetchHtml");
 
 function toStr(x) {
   return String(x ?? "").trim();
@@ -15,8 +15,6 @@ module.exports = async (req, res) => {
   const sp = urlObj.searchParams;
   const url = toStr(sp.get("url"));
   const options = sp.get("options") || -1;
-
-  console.log({ url, options });
 
   if (!url) {
     return res.status(400).json({

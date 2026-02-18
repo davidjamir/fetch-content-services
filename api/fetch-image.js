@@ -1,5 +1,5 @@
 // api/fetch-image.js
-const { fetchHtml } = require("../src/fetchHtml");
+const { fetchHtmlSmart } = require("../src/fetchHtml");
 const { extractMeta } = require("../src/extract");
 const { cleanArticleHtml } = require("../src/clean");
 const { isAuthorized } = require("../helper/isAuthorized");
@@ -42,16 +42,16 @@ module.exports = async (req, res) => {
 
   const format = (sp.get("format") || "json").toLowerCase(); // json | text
   const redirect = ["1", "true", "yes"].includes(
-    (sp.get("redirect") || "").toLowerCase()
+    (sp.get("redirect") || "").toLowerCase(),
   );
   const timeoutMs = Math.min(
     Math.max(toInt(sp.get("timeout"), 15000), 1000),
-    60000
+    60000,
   );
 
   try {
     // chỉ fetch html để bóc meta (nhẹ hơn nhiều so với clean nội dung)
-    const rawHtml = await fetchHtml(targetUrl, { timeoutMs });
+    const rawHtml = await fetchHtmlSmart(targetUrl, { timeoutMs });
     const meta = extractMeta(rawHtml, targetUrl);
     const cleaned = cleanArticleHtml(rawHtml);
 
