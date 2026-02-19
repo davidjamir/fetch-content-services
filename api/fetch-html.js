@@ -26,7 +26,7 @@ module.exports = async (req, res) => {
   try {
     const result =
       options >= 0
-        ? await fetchHtmlSmart(url, options)
+        ? await fetchHtmlSmart(url, { options })
         : await fetchHtmlSmart(url);
     return res.status(200).json({ ok: true, options, result });
   } catch (e) {

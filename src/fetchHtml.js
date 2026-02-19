@@ -83,15 +83,15 @@ async function fetchHtmlLocal(url, { timeoutMs = 12000 } = {}) {
 
 // async function fetchHtmlOnline() {}
 
-async function fetchHtmlSmart(url, options) {
+async function fetchHtmlSmart(url, { timeoutMs, options } = {}) {
   const strategies = [
     async () => {
       console.log("Try Crawl Manual...");
-      return await fetchHtml(url);
+      return await fetchHtml(url, { timeoutMs });
     },
     async () => {
       console.log("Try Crawl Local...");
-      return await fetchHtmlLocal(url);
+      return await fetchHtmlLocal(url, { timeoutMs });
     },
     // async () => {
     //   console.log("Try Crawl Online...");
