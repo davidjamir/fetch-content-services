@@ -106,6 +106,7 @@ const REMOVE_CLASSES = [
   "bs-single-related",
   "emoji",
   "screen-reader-text",
+  "voltax-recirculation-widget"
 
   // thêm class của mày vào đây
 ];
