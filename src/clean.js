@@ -23,6 +23,9 @@ const REMOVE_KEYWORDS = [
   "system-nav",
   "comment",
   "info-author",
+  "share-menu",
+  "OP_1",
+  "9b_7",
 ];
 
 const AD_SELECTORS = [
@@ -106,7 +109,7 @@ const REMOVE_CLASSES = [
   "bs-single-related",
   "emoji",
   "screen-reader-text",
-  "voltax-recirculation-widget"
+  "voltax-recirculation-widget",
 
   // thêm class của mày vào đây
 ];
@@ -123,6 +126,7 @@ const DROP_NAMES = new Set([
   "footer",
   "aside",
   "ins",
+  "time",
 ]);
 
 const REMOVE_CLASS_SET = new Set(
@@ -544,6 +548,8 @@ function dfs(node, ctx) {
   // ===== REMOVE BY CLASS =====
   const classAttr = node.attribs?.class;
   const idAttr = node.attribs?.id || "";
+  const dataTestId = node.attribs?.["data-testid"] || "";
+  const qKey = node.attribs?.["q:key"] || "";
 
   if (classAttr) {
     const classes = classAttr.toLowerCase().split(/\s+/);
@@ -555,7 +561,12 @@ function dfs(node, ctx) {
     }
   }
 
-  if (hasRemoveKeyword(classAttr) || hasRemoveKeyword(idAttr)) {
+  if (
+    hasRemoveKeyword(classAttr) ||
+    hasRemoveKeyword(idAttr) ||
+    hasRemoveKeyword(dataTestId) ||
+    hasRemoveKeyword(qKey)
+  ) {
     removeNode(node);
     return;
   }
