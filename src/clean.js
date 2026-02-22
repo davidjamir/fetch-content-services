@@ -25,7 +25,8 @@ const REMOVE_KEYWORDS = [
   "info-author",
   "share-menu",
   "OP_1",
-  "9b_7",
+  "FU_7",
+  "S2_2",
 ];
 
 const AD_SELECTORS = [
@@ -212,8 +213,8 @@ function getHost(u) {
 }
 
 function hasRemoveKeyword(str = "") {
-  const s = str.toLowerCase();
-  return REMOVE_KEYWORDS.some((k) => s.includes(k));
+  const s = str.trim();
+  return !s ? false : REMOVE_KEYWORDS.some((k) => s.includes(k));
 }
 
 function imageIdentityTokens(u) {
