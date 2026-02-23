@@ -27,6 +27,7 @@ const REMOVE_KEYWORDS = [
   "OP_1",
   "FU_7",
   "S2_2",
+  "7D_7",
 ];
 
 const AD_SELECTORS = [
