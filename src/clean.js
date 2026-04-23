@@ -24,10 +24,15 @@ const REMOVE_KEYWORDS = [
   "comment",
   "info-author",
   "share-menu",
+  "google-news-widget",
+
   "OP_1",
   "FU_7",
   "S2_2",
   "7D_7",
+  "J0_2",
+  "WY_1",
+  "6q",
 ];
 
 const AD_SELECTORS = [
@@ -552,6 +557,7 @@ function dfs(node, ctx) {
   const idAttr = node.attribs?.id || "";
   const dataTestId = node.attribs?.["data-testid"] || "";
   const qKey = node.attribs?.["q:key"] || "";
+  const qId = node.attribs?.["q:id"] || "";
 
   if (classAttr) {
     const classes = classAttr.toLowerCase().split(/\s+/);
@@ -567,7 +573,8 @@ function dfs(node, ctx) {
     hasRemoveKeyword(classAttr) ||
     hasRemoveKeyword(idAttr) ||
     hasRemoveKeyword(dataTestId) ||
-    hasRemoveKeyword(qKey)
+    hasRemoveKeyword(qKey) ||
+    hasRemoveKeyword(qId)
   ) {
     removeNode(node);
     return;
