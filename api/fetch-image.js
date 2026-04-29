@@ -53,9 +53,11 @@ module.exports = async (req, res) => {
     // chỉ fetch html để bóc meta (nhẹ hơn nhiều so với clean nội dung)
     const rawHtml = await fetchHtmlSmart(targetUrl, { timeoutMs });
     const meta = extractMeta(rawHtml, targetUrl);
-    const cleaned = cleanArticleHtml(rawHtml);
+    const cleaned = cleanArticleHtml(rawHtml, {
+      featuredImage: meta.featuredImage || "",
+    });
 
-    const featuredImage = toStr(meta?.featuredImage);
+    const featuredImage = toStr(cleaned.featuredImage || meta?.featuredImage);
 
     if (!featuredImage) {
       // không tìm thấy og image

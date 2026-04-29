@@ -263,17 +263,26 @@ function sameImageBySemanticIdentity(a, b) {
 
 function handleFeaturedImage($root, ogImage) {
   let reason = "no_og_image";
-  if (!ogImage) return { added: false, reason };
-
   const firstImg = $root.find("img").first();
   const firstSrc = toStr(firstImg.attr("src") || "");
 
-  console.log(ogImage);
-  console.log(firstSrc);
+  if (!ogImage) {
+    if (firstSrc) {
+      return {
+        added: false,
+        reason: "content_image",
+        featuredImage: firstSrc,
+      };
+    }
+
+    return { added: false, reason, featuredImage: "" };
+  }
 
   if (firstSrc && sameImageBySemanticIdentity(firstSrc, ogImage)) {
     reason = "same_image";
     firstImg.remove();
+  } else {
+    reason = "og_image";
   }
 
   // prepend og image
@@ -283,7 +292,7 @@ function handleFeaturedImage($root, ogImage) {
     </div>`,
   );
 
-  return { added: true, reason };
+  return { added: true, reason, featuredImage: ogImage };
 }
 
 function processImage(node) {
@@ -625,7 +634,12 @@ function cleanArticleHtml(html, opts = {}) {
   const snippet = buildSnippet($root.text());
   const htmlClean = $root.html() || "";
 
-  return { htmlClean, snippet, thumb: thumbResult };
+  return {
+    htmlClean,
+    snippet,
+    thumb: thumbResult,
+    featuredImage: thumbResult.featuredImage || "",
+  };
 }
 
 module.exports = { cleanArticleHtml };

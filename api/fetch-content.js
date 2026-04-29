@@ -59,6 +59,7 @@ module.exports = async (req, res) => {
     const cleaned = cleanArticleHtml(rawHtml, {
       featuredImage: meta.featuredImage || "",
     });
+    const featuredImage = toStr(cleaned.featuredImage || meta.featuredImage);
 
     if (mode === "raw") {
       res.setHeader("Content-Type", "text/html; charset=utf-8");
@@ -70,7 +71,7 @@ module.exports = async (req, res) => {
         hostBase: getHostBase(req),
         url: targetUrl,
         title: meta.title || "Preview",
-        featuredImage: meta.featuredImage || "",
+        featuredImage,
         snippet: cleaned.snippet || "",
         htmlClean: cleaned.htmlClean || "",
       });
@@ -81,7 +82,7 @@ module.exports = async (req, res) => {
 
     return res.status(200).json({
       ok: true,
-      image: toStr(meta.featuredImage),
+      image: featuredImage,
       html: cleaned.htmlClean || "",
       snippet: toStr(cleaned.snippet),
     });
