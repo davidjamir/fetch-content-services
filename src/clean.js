@@ -134,6 +134,7 @@ const DROP_NAMES = new Set([
   "aside",
   "ins",
   "time",
+  "picture"
 ]);
 
 const REMOVE_CLASS_SET = new Set(
