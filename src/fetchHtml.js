@@ -31,6 +31,7 @@ async function fetchCrawl(url, timeoutMs = 1200) {
       headers: {
         // UA đơn giản nhưng đủ dùng cho nhiều site
         "user-agent": randomUA(),
+        "user-custom": "google-bot-seo",
         "ngrok-skip-browser-warning": "true",
         accept:
           "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
