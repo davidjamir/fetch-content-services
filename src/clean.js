@@ -134,7 +134,7 @@ const DROP_NAMES = new Set([
   "aside",
   "ins",
   "time",
-  "picture"
+  "picture",
 ]);
 
 const REMOVE_CLASS_SET = new Set(
@@ -262,7 +262,7 @@ function sameImageBySemanticIdentity(a, b) {
   );
 }
 
-function handleFeaturedImage($root, ogImage) {
+function handleFeaturedImage($root, ogImage, title) {
   let reason = "no_og_image";
   const firstImg = $root.find("img").first();
   const firstSrc = toStr(firstImg.attr("src") || "");
@@ -289,7 +289,7 @@ function handleFeaturedImage($root, ogImage) {
   // prepend og image
   $root.prepend(
     `<div class="og-thumb" style="margin:0 0 12px;display:flex;justify-content:center">
-      <img src="${ogImage}" style="max-width:100%;height:auto;border-radius:12px" />
+      <img src="${ogImage}" style="max-width:100%;height:auto;border-radius:12px" alt="${title}" />
     </div>`,
   );
 
@@ -613,6 +613,7 @@ function dfs(node, ctx) {
 
 function cleanArticleHtml(html, opts = {}) {
   const featuredImage = toStr(opts.featuredImage);
+  const title = toStr(opts.title);
   const $ = cheerio.load(html);
 
   const ctx = {
@@ -629,7 +630,7 @@ function cleanArticleHtml(html, opts = {}) {
     );
   }
 
-  const thumbResult = handleFeaturedImage($root, featuredImage);
+  const thumbResult = handleFeaturedImage($root, featuredImage, title);
   console.log("Reason: ", thumbResult.reason);
 
   const snippet = buildSnippet($root.text());

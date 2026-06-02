@@ -58,6 +58,7 @@ module.exports = async (req, res) => {
     const meta = extractMeta(rawHtml, targetUrl);
     const cleaned = cleanArticleHtml(rawHtml, {
       featuredImage: meta.featuredImage || "",
+      title: meta.title || "",
     });
     const featuredImage = toStr(cleaned.featuredImage || meta.featuredImage);
 
