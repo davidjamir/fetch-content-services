@@ -289,7 +289,7 @@ function handleFeaturedImage($root, ogImage, title) {
   // prepend og image
   $root.prepend(
     `<div class="og-thumb" style="margin:0 0 12px;display:flex;justify-content:center">
-      <img src="${ogImage}" style="max-width:100%;height:auto;border-radius:12px" alt="${title}" />
+      <img src="${ogImage}" style="max-width:100%;height:auto;border-radius:12px" alt="${title}" fetchpriority="high" />
     </div>`,
   );
 
