@@ -25,6 +25,10 @@ const REMOVE_KEYWORDS = [
   "info-author",
   "share-menu",
   "google-news-widget",
+  "sr-wrapper-0",
+  "J0_2",
+  "aZ_0",
+  "OP_2",
 ];
 
 const AD_SELECTORS = [
@@ -83,7 +87,6 @@ const VIDEO_IFRAME_HOSTS = [
   "player.tiktok.com",
   "dailymotion.com",
   "twitter.com",
-  
 ];
 
 const REMOVE_CLASSES = [
@@ -113,7 +116,8 @@ const REMOVE_CLASSES = [
   "aspect-video",
   "player-wrapper",
   "voltax-google-preferred-source",
-  "voltax-recirculation-widget"
+  "voltax-recirculation-widget",
+  "sportradarWrapper",
   // thêm class của mày vào đây
 ];
 
@@ -131,7 +135,7 @@ const DROP_NAMES = new Set([
   "ins",
   "time",
   "picture",
-  "figcaption"
+  "figcaption",
 ]);
 
 const REMOVE_CLASS_SET = new Set(
