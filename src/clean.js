@@ -83,6 +83,7 @@ const VIDEO_IFRAME_HOSTS = [
   "player.tiktok.com",
   "dailymotion.com",
   "twitter.com",
+  
 ];
 
 const REMOVE_CLASSES = [
