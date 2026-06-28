@@ -25,14 +25,6 @@ const REMOVE_KEYWORDS = [
   "info-author",
   "share-menu",
   "google-news-widget",
-
-  "OP_1",
-  "FU_7",
-  "S2_2",
-  "7D_7",
-  "J0_2",
-  "WY_1",
-  "6q",
 ];
 
 const AD_SELECTORS = [
@@ -117,7 +109,10 @@ const REMOVE_CLASSES = [
   "emoji",
   "screen-reader-text",
   "voltax-recirculation-widget",
-
+  "aspect-video",
+  "player-wrapper",
+  "voltax-google-preferred-source",
+  "voltax-recirculation-widget"
   // thêm class của mày vào đây
 ];
 
@@ -135,6 +130,7 @@ const DROP_NAMES = new Set([
   "ins",
   "time",
   "picture",
+  "figcaption"
 ]);
 
 const REMOVE_CLASS_SET = new Set(
