@@ -86,14 +86,14 @@ async function fetchHtmlLocal(url, { timeoutMs = 12000 } = {}) {
 
 // async function fetchHtmlOnline() {}
 
-async function fetchHtmlCloudflare(url) {
+async function fetchHtmlCloudflare(url, { timeoutMs = 12000 } = {}) {
   url = toStr(url);
   if (!isHttpUrl(url)) throw new Error("url must start with http(s)://");
 
   try {
     const r = await fetchCrawl(
       `${WORKER_CRAWL_LIST[Math.floor(Math.random() * WORKER_CRAWL_LIST.length)]}?url=${url}`,
-      12000,
+      timeoutMs,
     );
     if (!r.ok) throw new Error("cloudflare server returned not ok");
     const html = await r.text();
@@ -105,11 +105,11 @@ async function fetchHtmlCloudflare(url) {
   }
 }
 
-async function fetchHtmlSmart(url, { timeoutMs, options } = {}) {
+async function fetchHtmlSmart(url, { timeoutMs = 12000, options } = {}) {
   const strategies = [
     async () => {
       console.log("Try Crawl Manual...");
-      return await fetchHtml(url, { timeoutMs });
+      return await fetchHtml(url, { timeoutMs: Math.min(4000, timeoutMs) });
     },
     // async () => {
     //   console.log("Try Crawl Local...");
@@ -121,7 +121,7 @@ async function fetchHtmlSmart(url, { timeoutMs, options } = {}) {
     // },
     async () => {
       console.log("Try Crawl Cloudflare...");
-      return await fetchHtmlCloudflare(url);
+      return await fetchHtmlCloudflare(url, { timeoutMs });
     },
   ];
 
