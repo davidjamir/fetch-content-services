@@ -1,3 +1,5 @@
+const { WORKER_CRAWL_LIST } = require("../constant.js");
+
 const LOCAL_URL =
   "https://turtle-neat-closely.ngrok-free.app/api/fetch-html?options=0";
 
@@ -84,20 +86,43 @@ async function fetchHtmlLocal(url, { timeoutMs = 12000 } = {}) {
 
 // async function fetchHtmlOnline() {}
 
+async function fetchHtmlCloudflare(url) {
+  url = toStr(url);
+  if (!isHttpUrl(url)) throw new Error("url must start with http(s)://");
+
+  try {
+    const r = await fetchCrawl(
+      `${WORKER_CRAWL_LIST[Math.floor(Math.random() * WORKER_CRAWL_LIST.length)]}?url=${url}`,
+      12000,
+    );
+    if (!r.ok) throw new Error("cloudflare server returned not ok");
+    const html = await r.text();
+    if (!html) throw new Error("empty html");
+
+    return html;
+  } catch (err) {
+    throw new Error(err.response?.statusCode || err.message);
+  }
+}
+
 async function fetchHtmlSmart(url, { timeoutMs, options } = {}) {
   const strategies = [
     async () => {
       console.log("Try Crawl Manual...");
       return await fetchHtml(url, { timeoutMs });
     },
-    async () => {
-      console.log("Try Crawl Local...");
-      return await fetchHtmlLocal(url, { timeoutMs });
-    },
+    // async () => {
+    //   console.log("Try Crawl Local...");
+    //   return await fetchHtmlLocal(url, { timeoutMs });
+    // },
     // async () => {
     //   console.log("Try Crawl Online...");
     //   return await fetchHtmlOnline(url);
     // },
+    async () => {
+      console.log("Try Crawl Cloudflare...");
+      return await fetchHtmlCloudflare(url);
+    },
   ];
 
   // ===== Nếu có option -> chạy đúng 1 strategy =====
