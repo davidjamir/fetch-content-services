@@ -343,7 +343,7 @@ function processImage(node) {
   });
 }
 
-function getVideoEmbedInfo(rawUrl, ctx) {
+function getVideoEmbedInfo(rawUrl) {
   if (!rawUrl) return null;
 
   const url = rawUrl.trim().replace(/&#0?38;/g, "&");
@@ -429,11 +429,6 @@ function getVideoEmbedInfo(rawUrl, ctx) {
     };
   }
 
-  if (host === "twitter.com" || host === "x.com") {
-    ctx.hasTwitter = true;
-    return null;
-  }
-
   return null;
 }
 
@@ -484,13 +479,13 @@ function unwrapNode(node) {
   parent.children.splice(idx, 1, ...children);
 }
 
-function dfs(node, ctx) {
+function dfs(node) {
   if (!node) return;
 
   // ROOT
   if (node.type === "root") {
     for (const c of node.children || []) {
-      dfs(c, ctx);
+      dfs(c);
     }
     return;
   }
@@ -540,7 +535,7 @@ function dfs(node, ctx) {
       return;
     }
 
-    const video = getVideoEmbedInfo(href, ctx);
+    const video = getVideoEmbedInfo(href);
     if (!video) {
       return;
     }
@@ -595,7 +590,7 @@ function dfs(node, ctx) {
   // vì các trường hợp trên đã xử lý xong rồi
 
   for (const child of [...(node.children || [])]) {
-    dfs(child, ctx);
+    dfs(child);
   }
 
   // ===== POST PROCESS (SAU KHI CON ĐÃ SẠCH) =====
@@ -617,19 +612,10 @@ function cleanArticleHtml(html, opts = {}) {
   const title = toStr(opts.title);
   const $ = cheerio.load(html);
 
-  const ctx = {
-    hasTwitter: false,
-  };
-  dfs($.root()[0], ctx);
+  dfs($.root()[0]);
 
   // pick root
   const $root = pickMainRoot($);
-
-  if (ctx.hasTwitter) {
-    $root.append(
-      '<script async src="https://platform.twitter.com/widgets.js"></script>',
-    );
-  }
 
   const thumbResult = handleFeaturedImage($root, featuredImage, title);
   console.log("Reason: ", thumbResult.reason);
