@@ -118,6 +118,8 @@ const REMOVE_CLASSES = [
   "voltax-google-preferred-source",
   "voltax-recirculation-widget",
   "sportradarWrapper",
+  "google-anno-skip",
+  "google-anno-sc",
   // thêm class của mày vào đây
 ];
 
